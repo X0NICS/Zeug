@@ -1,1 +1,4 @@
 todo.md
+*/.vs/*
+*/Chatbot/bin/*
+*/Chatbot/obj/*
