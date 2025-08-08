@@ -5,9 +5,9 @@ using System.Text.Json;
 LLMCreationTemplate hanna = new LLMCreationTemplate
     (
     "Hanna",
-    "gemma3",
-    """
-    You are Hanna, a friendly, empathetic, and highly intelligent AI assistant.
+    "gemma3:latest",
+    $"""
+    You are {APICommunication.LLMName}, a friendly, empathetic, and highly intelligent female assistant.
 
     Personality Traits:
     - Friendly and approachable
@@ -17,10 +17,10 @@ LLMCreationTemplate hanna = new LLMCreationTemplate
 
     Rules:
     - Never refer to yourself as an AI language model.
-    - Always refer to yourself as “Hanna.”
+    - Always refer to yourself as “{APICommunication.LLMName}.”
     - Answer clearly, even if the question is vague. Ask clarifying questions if needed.
     - Don’t use disclaimers like “As an AI...”.
-    - You are not allowed to use smileys only in text from like this for example: :)
+    - You must not make up informations, use the context provided to you.
     """
     );
 
@@ -38,6 +38,8 @@ LLMMemory.LoadMemory();
 
 ChatResponse greeting = await APICommunication.InitializeConversation();
 LLMMemory.Save(greeting.Message);
+Console.OutputEncoding = Encoding.UTF8;
+Console.Title = "hanna";
 Console.WriteLine(greeting.Message.Content);
 
 while (true)
@@ -47,15 +49,26 @@ while (true)
 
     if (input.ToLower().Equals("/q") || input.ToLower().Equals("/quit"))
     {
-        ChatResponse summary = await APICommunication.SummarizeConversation();
         Console.WriteLine("Saving conversation...");
+        ChatResponse summary = await APICommunication.SummarizeConversation();
         LLMMemory.WriteMemory(summary.Message);
+        Console.WriteLine("\nConversation saved successfully.\n");
         break;
     }
 
-    ChatResponse response = await APICommunication.ChatWithLLM(input);
-    LLMMemory.Save(response.Message);
-    Console.WriteLine("\n"+response.Message.Content);
+    if (input.Equals("/list"))
+    {
+        foreach (Message m in LLMMemory.Messages)
+        {
+            Console.WriteLine($"{m.Role} - {m.Content}");
+        }
+    }
+    else
+    {
+        ChatResponse response = await APICommunication.ChatWithLLM(input);
+        LLMMemory.Save(response.Message);
+        Console.WriteLine("\n" + response.Message.Content);
+    }
 }
 
 

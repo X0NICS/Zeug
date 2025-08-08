@@ -17,15 +17,36 @@ namespace Chatbot.Resources
         {
             Messages.Add(message);
         }
+        /// <summary>
+        /// Removes LLM Instructions from context, used to clean up summary from unnecessary prompts
+        /// </summary>
+        public static void RemoveInstructionsFromContext()
+        {
+            string json = File.ReadAllText(jsonPath);
+            int summariesCount = 0;
+            summaries = JsonConvert.DeserializeObject<List<Message>>(json);
 
+            if (summaries.Count > 0)
+            {
+                summariesCount = summaries.Count - 1;
+            }
+
+            for (int i = summariesCount; i < 3; i++)
+            {
+                Messages.RemoveAt(summariesCount);
+            }
+        }
+        /// <summary>
+        /// Pulls summaries from JSON File
+        /// </summary>
         public static void LoadMemory()
         {
                 string json = File.ReadAllText(jsonPath);
                 summaries = JsonConvert.DeserializeObject<List<Message>>(json);
 
-                if (summaries != null)
+            if (summaries != null)
                 {
-                    Message demoUserMessage = new Message() { Role = "user", Content = "Acknowledge these summaries. You are forced to use them as context. You are not allowed to make something up. Respond with ACKNOWLEDGED" };
+                    Message demoUserMessage = new Message() { Role = "user", Content = "Acknowledge these summaries marked by the role 'summary'. You are forced to use them for context. You are not allowed to make something up. Respond with ACKNOWLEDGED" };
                     Message demoLLMMessage = new Message() { Role = "assistant", Content = "ACKNOWLEDGED" };
                     summaries.Add(demoUserMessage);
                     summaries.Add(demoLLMMessage);
@@ -34,23 +55,30 @@ namespace Chatbot.Resources
                 }
             
         }
-
+        /// <summary>
+        /// Writes context summary to JSON File
+        /// </summary>
+        /// <param name="summary"></param>
         public static void WriteMemory(Message summary)
         {
-            string json = File.ReadAllText(jsonPath);
-            summaries = JsonConvert.DeserializeObject<List<Message>>(json);
-            if (summaries != null)
+            if (!Messages.Count.Equals(0))
             {
-                summaries.Add(summary);
-            }
-            else
-            {
-                summaries = [summary];
-            }
+                string json = File.ReadAllText(jsonPath);
+                summary.Role = "system";
+                summaries = JsonConvert.DeserializeObject<List<Message>>(json);
+                if (summaries != null)
+                {
+                    summaries.Add(summary);
+                }
+                else
+                {
+                    summaries = [summary];
+                }
 
-            string formattedSummaries = JsonConvert.SerializeObject(summaries);
+                string formattedSummaries = JsonConvert.SerializeObject(summaries);
 
-            File.WriteAllText(jsonPath, formattedSummaries);
+                File.WriteAllText(jsonPath, formattedSummaries);
+            }
         }
     }
 }

@@ -13,6 +13,7 @@ namespace Chatbot.Resources
     {
         static string endpoint = "http://127.0.0.1:11434";
         static HttpClient client = new HttpClient();
+        public const string LLMName = "Hanna";
 
         static APICommunication()
         {
@@ -21,6 +22,7 @@ namespace Chatbot.Resources
 
         public async static Task<bool> EstablishLLM(LLMCreationTemplate template)
         {
+            HttpResponseMessage llmListRequest = await client.GetAsync("/api/tags");
             HttpResponseMessage responseRequest = await client.PostAsync("/api/create", new StringContent(template.ToJson(), Encoding.UTF8, "application/json"));
 
             Task<string> success = responseRequest.Content.ReadAsStringAsync();
@@ -28,6 +30,11 @@ namespace Chatbot.Resources
             return success.Result.Contains("Success");
         }
 
+        /// <summary>
+        /// Method to communicate with LLM via chat
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
         public async static Task<ChatResponse> ChatWithLLM(string message) 
         {
             Message userMessage = new Message()
@@ -42,7 +49,7 @@ namespace Chatbot.Resources
                 "/api/chat", 
                 new StringContent(new ChatFormat 
                 { 
-                    Model = "Hanna", 
+                    Model = LLMName, 
                     Messages = LLMMemory.Messages
                 }.ToJson(), 
                 Encoding.UTF8, 
@@ -55,6 +62,10 @@ namespace Chatbot.Resources
                 return response;
         }
 
+        /// <summary>
+        /// Commands LLM to initialize in conversation
+        /// </summary>
+        /// <returns></returns>
         public async static Task<ChatResponse> InitializeConversation()
         {
             HttpResponseMessage chatRequest = await client.PostAsync
@@ -62,8 +73,8 @@ namespace Chatbot.Resources
                 "/api/chat",
                 new StringContent(new ChatFormat
                 {
-                    Model = "Hanna",
-                    Messages = [new Message { Role = "system", Content = "Introduce yourself as Hanna and greet the user" }],
+                    Model = LLMName,
+                    Messages = [new Message { Role = "system", Content = $"Introduce yourself as {LLMName} and greet the user like you already know each other" }],
                 }.ToJson(),
                 Encoding.UTF8,
                 "application/json"
@@ -74,16 +85,20 @@ namespace Chatbot.Resources
 
             return response;
         }
-
+        /// <summary>
+        /// Commands the LLM to summarize the conversation context
+        /// </summary>
+        /// <returns></returns>
         public async static Task<ChatResponse> SummarizeConversation() 
         {
-            LLMMemory.Save(new Message { Role = "system", Content = "Summarize the conversation as short as possible without losing information you deem important in thrid person" });
+            LLMMemory.RemoveInstructionsFromContext();
+            LLMMemory.Save(new Message { Role = "system", Content = "Summarize the conversation as short as possible without losing information you deem important in first person. Make sure to keep redundancy low, leave out information that has already been saved in other summaries. Give the summary in the following format: 'Summary'" });
             HttpResponseMessage chatRequest = await client.PostAsync
                 (
                     "/api/chat",
                     new StringContent(new ChatFormat
                     {
-                        Model = "Hanna",
+                        Model = LLMName,
                         Messages = LLMMemory.Messages
                     }.ToJson(),
                     Encoding.UTF8,
